@@ -1,0 +1,11 @@
+{
+  "appName": "hello-world2",
+  "userGivenName": "hello-world2",
+  "destNamespace": "default",
+  "destServer": "https://kubernetes.default.svc",
+  "srcPath": "apps/hello-world2/overlays/testing",
+  "srcRepoURL": "https://github.com/lesh915/lesh-ai-poet.git",
+  "srcTargetRevision": "",
+  "labels": null,
+  "annotations": null
+}
