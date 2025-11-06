@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: middleware
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+      tier: middleware
+  serviceName: "mysql"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+        tier: middleware
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: mysql
+        image: mysql:8.0.30
+        ports:
+        - containerPort: 3306
+          name: mysql
+        envFrom:
+        - configMapRef:
+            name: mysql
+        - secretRef:
+            name: mysql
+        volumeMounts:
+          - name: config
+            mountPath: /etc/mysql/conf.d
+        resources:
+          requests:
+            cpu: "0.5"
+            memory: "512Mi"
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command:
+              - /bin/bash
+              - -ec
+              - |
+                password_aux="${MYSQL_ROOT_PASSWORD:-}"
+                mysqladmin status -uroot -p"${password_aux}"
+        livenessProbe:
+          exec:
+            command:
+              - /bin/bash
+              - -ec
+              - |
+                password_aux="${MYSQL_ROOT_PASSWORD:-}"
+                mysqladmin status -uroot -p"${password_aux}"
+      volumes:
+        - name: config
+          configMap:
+            name: mysql-conf
+        

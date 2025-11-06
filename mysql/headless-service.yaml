@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-hs
+  namespace: middleware
+  labels:
+    app: mysql
+    tier: middleware
+spec:
+  ports:
+  - port: 3306
+    name: mysql
+  clusterIP: None
+  selector:
+    app: mysql
+    tier: middleware
+
