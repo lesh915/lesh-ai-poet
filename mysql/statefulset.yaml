@@ -9,7 +9,7 @@ spec:
       app: mysql
       tier: middleware
   serviceName: "mysql"
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       labels:
