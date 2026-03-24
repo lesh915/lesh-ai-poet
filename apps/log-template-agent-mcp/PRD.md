@@ -7,15 +7,20 @@
 
 ### 1.2 목적
 `drain3-log-matching` 프로젝트에서 확보한 로그 파싱·템플릿화 능력을 확장하여,
-LangChain 기반 AI 에이전트와 fastmcp(MCP 서버)로 래핑한다.
+LangGraph 기반 멀티스텝 AI 에이전트와 fastmcp(MCP 서버)로 래핑한다.
 클라이언트는 자연어 질의 또는 MCP 툴 호출을 통해 **템플릿 정보**와 **원본 로그** 를
 필요에 따라 선택적으로 조회할 수 있다.
+
+에이전트는 단순 루프형(ReAct) 대신 **LangGraph StateGraph** 기반으로 동작하며,
+질의 복잡도에 따라 필요한 경우에만 심층 추론(Think) 단계를 거치고
+여러 노드에 걸쳐 단계별로 처리한다.
 
 ### 1.3 범위 (In-Scope)
 - 로그 텍스트/파일 수집 및 Drain3 템플릿 자동 추출
 - 템플릿 ↔ 원본 로그 양방향 매칭 데이터 관리 (pandas DataFrame)
 - MCP 툴로 템플릿/원본 데이터 노출 (fastmcp)
-- LangChain 에이전트: 질의 의도를 파악하여 템플릿 전용·원본 전용·혼합 응답 자동 결정
+- LangGraph 멀티스텝 에이전트: 질의 복잡도에 따른 조건 분기 + 단계별 처리
+- 필요 시 심층 추론(Think) 노드 자동 활성화
 
 ### 1.4 범위 외 (Out-of-Scope)
 - 영구 저장소(DB, 파일 스냅샷) 연동 (v1 기준, 메모리 내 운영)
@@ -70,17 +75,53 @@ LangChain 기반 AI 에이전트와 fastmcp(MCP 서버)로 래핑한다.
 | `search_logs` | `keyword?`, `level?`, `system?`, `category?`, `template_id?`, `start?`, `end?` | 매칭 로그 + 템플릿 정보 |
 | `ask_agent` | `query: str` | LangChain 에이전트가 생성한 자연어 응답 |
 
-### FR-03: LangChain AI 에이전트
+### FR-03: LangGraph 멀티스텝 AI 에이전트
 - `ask_agent` 툴을 통해 자연어 질의를 받는다.
-- 에이전트는 위 MCP 툴(FR-02)을 도구(Tool)로 등록하여 ReAct 방식으로 호출한다.
-- 다음 판단 로직을 따른다:
+- 에이전트는 **LangGraph StateGraph** 로 구현되며 아래 노드 순서로 처리한다.
 
 ```
-질의 분석
-  ├─ "템플릿", "패턴", "형식" 언급 → 템플릿 정보 위주로 응답
-  ├─ "원본", "실제", "raw", "상세" 언급 → 원본 로그 위주로 응답
-  └─ 모호한 경우 → 템플릿 요약 + 원본 샘플 함께 응답
+[입력]
+  │
+  ▼
+┌─────────┐     복잡한 질의(다단계 추론 필요)
+│  route  │ ──────────────────────────────► ┌──────────┐
+│ (분류)  │                                 │  think   │ (심층 추론)
+└─────────┘                                 └────┬─────┘
+  │ 단순 질의                                    │
+  ▼                                              ▼
+┌──────────────┐                          ┌──────────────┐
+│   execute    │◄─────────────────────────│   execute    │
+│  (툴 실행)   │                          │  (툴 실행)   │
+└──────┬───────┘                          └──────┬───────┘
+       │ 추가 정보 필요                           │
+       └──────────┐                              │
+                  ▼                              ▼
+            ┌──────────┐                  ┌──────────┐
+            │  think   │                  │synthesize│
+            │ (재추론) │                  │ (응답생성)│
+            └────┬─────┘                  └──────────┘
+                 │
+                 ▼
+           ┌──────────┐
+           │synthesize│
+           │ (응답생성)│
+           └──────────┘
 ```
+
+**노드 역할**
+
+| 노드 | 역할 | 활성 조건 |
+|------|------|-----------|
+| `route` | 질의 복잡도 분류 (simple / complex) | 항상 실행 |
+| `think` | 다단계 추론 계획 수립, 필요 툴 목록 결정 | complex 분류 또는 execute 후 재판단 필요 시 |
+| `execute` | 결정된 툴 순서대로 실행 | 항상 실행 |
+| `synthesize` | 수집된 결과를 통합, 응답 모드(template/original/mixed) 결정 | 항상 실행 |
+
+**응답 모드 결정 규칙**
+- `route` / `think` 단계에서 질의 분석:
+  - "패턴", "템플릿", "종류", "형식" → **template**
+  - "원본", "실제", "상세", "raw" → **original**
+  - 모호하거나 복합 → **mixed** (템플릿 요약 + 원본 샘플 최대 5건)
 
 ### FR-04: 응답 데이터 구조
 에이전트 및 MCP 툴 응답은 아래 형식을 기본으로 한다.
@@ -133,7 +174,8 @@ LangChain 기반 AI 에이전트와 fastmcp(MCP 서버)로 래핑한다.
 | 템플릿 추출 | `drain3` + `drain3_extractor` 재사용 |
 | 데이터 관리 | `pandas` + `log_store` 재사용 |
 | MCP 서버 | `fastmcp` |
-| AI 에이전트 | `langchain` + `langchain-anthropic` (Claude) |
+| AI 에이전트 | `langgraph` StateGraph (route / think / execute / chunk_analyze / synthesize 노드) |
+| LLM 연동 | `langchain-anthropic` (Claude claude-sonnet-4-6) |
 | 설정 관리 | `pydantic-settings` (`.env` 기반) |
 | 패키징 | `uv` 또는 `pip` + `requirements.txt` |
 
