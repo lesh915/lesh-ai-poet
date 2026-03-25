@@ -12,13 +12,13 @@ think ↔ execute 사이에 재추론 루프 가능:
 """
 
 from langgraph.graph import StateGraph, END
-from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseChatModel
 from agent.state import AgentState
 from agent.nodes import make_nodes
 from core.log_engine import LogEngine
 
 
-def build_graph(llm: ChatAnthropic, engine: LogEngine):
+def build_graph(llm: BaseChatModel, engine: LogEngine):
     """
     LangGraph StateGraph를 빌드하고 컴파일된 그래프를 반환한다.
 

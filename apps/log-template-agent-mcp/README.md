@@ -60,7 +60,7 @@ pip install -r requirements.txt
 | `drain3` | 로그 템플릿 추출 알고리즘 |
 | `pandas` | 로그 데이터프레임 관리 |
 | `fastmcp` | MCP 서버 프레임워크 |
-| `langchain` / `langchain-anthropic` | LLM 연동 |
+| `langchain` / `langchain-anthropic` / `langchain-openai` | LLM 연동 |
 | `langgraph` | 에이전트 상태 그래프 |
 | `pydantic-settings` | 환경 변수 관리 |
 
@@ -75,10 +75,18 @@ cp .env.example .env
 ```
 
 ```dotenv
-# Anthropic API Key (LangGraph 에이전트용, ask_agent 툴 사용 시 필수)
+# LLM 프로바이더 선택: anthropic (기본값) 또는 openai
+AGENT_PROVIDER=anthropic
+
+# Anthropic API Key (AGENT_PROVIDER=anthropic 일 때 필요)
 ANTHROPIC_API_KEY=sk-ant-...
 
-# 에이전트 모델 (기본: claude-sonnet-4-6)
+# OpenAI API Key (AGENT_PROVIDER=openai 일 때 필요)
+OPENAI_API_KEY=sk-...
+
+# 에이전트에서 사용할 모델
+# Anthropic: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001
+# OpenAI   : gpt-4o, gpt-4o-mini, gpt-4-turbo
 AGENT_MODEL=claude-sonnet-4-6
 
 # Drain3 파라미터

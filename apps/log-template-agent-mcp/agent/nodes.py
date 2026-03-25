@@ -6,7 +6,7 @@ route / think / execute / chunk_analyze / synthesize 노드를 make_nodes 팩토
 """
 
 import json
-from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage
 from agent.state import AgentState
 from agent.prompts import (
@@ -18,7 +18,7 @@ from agent.prompts import (
 from core.log_engine import LogEngine
 
 
-def make_nodes(llm: ChatAnthropic, engine: LogEngine):
+def make_nodes(llm: BaseChatModel, engine: LogEngine):
     """각 노드 함수를 생성하여 반환한다."""
 
     # ── route_node ─────────────────────────────────────────────────
