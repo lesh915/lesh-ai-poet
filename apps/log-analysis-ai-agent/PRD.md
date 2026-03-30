@@ -218,7 +218,7 @@ apps/log-analysis-ai-agent/
 | 템플릿 추출 | `drain3` + `drain3_extractor.py` 재사용 |
 | 데이터 관리 | `pandas` + `log_store.py` 재사용 |
 | AI 에이전트 | `langchain` ReAct 에이전트 |
-| LLM | `langchain-anthropic` (claude-sonnet-4-6) |
+| LLM | `langchain-openai` (gpt-4o) |
 | 설정 | `.env` + `python-dotenv` |
 
 ---
@@ -229,7 +229,7 @@ apps/log-analysis-ai-agent/
 drain3>=0.9.11
 pandas>=2.0.0
 langchain>=0.3.0
-langchain-anthropic>=0.3.0
+langchain-openai>=0.2.0
 langchain-core>=0.3.0
 python-dotenv>=1.0.0
 ```

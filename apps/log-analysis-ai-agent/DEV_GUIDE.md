@@ -46,7 +46,7 @@ pandas>=2.0.0
 
 # LangChain · LLM
 langchain>=0.3.0
-langchain-anthropic>=0.3.0
+langchain-openai>=0.2.0
 langchain-core>=0.3.0
 
 # 설정
@@ -63,11 +63,11 @@ python-dotenv>=1.0.0
 ## 3. 환경변수 (.env.example)
 
 ```dotenv
-# Anthropic API Key
-ANTHROPIC_API_KEY=sk-ant-...
+# OpenAI API Key
+OPENAI_API_KEY=sk-...
 
-# 에이전트에서 사용할 Claude 모델
-AGENT_MODEL=claude-sonnet-4-6
+# 에이전트에서 사용할 OpenAI 모델
+AGENT_MODEL=gpt-4o
 
 # Drain3 기본 파라미터
 DRAIN_SIM_TH=0.4
@@ -297,7 +297,7 @@ def build_system_prompt(
 import os
 import pandas as pd
 from dotenv import load_dotenv
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -324,9 +324,9 @@ def create_agent(
         template_tree=template_tree,
     )
 
-    llm = ChatAnthropic(
-        model=os.getenv("AGENT_MODEL", "claude-sonnet-4-6"),
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
+    llm = ChatOpenAI(
+        model=os.getenv("AGENT_MODEL", "gpt-4o"),
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
 
     prompt = ChatPromptTemplate.from_messages([
@@ -516,6 +516,10 @@ def test_agent_error_query():
     answer = run_query(agent, "ERROR 로그 패턴을 알려주세요")
     assert isinstance(answer, str)
     assert len(answer) > 0
+
+
+# 통합 테스트 실행 시 OPENAI_API_KEY 필요
+# pytest tests/test_agent.py -v -m integration
 ```
 
 테스트 실행:
