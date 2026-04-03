@@ -118,15 +118,37 @@ def build_cluster_summary_dataframe(merged_df: pd.DataFrame) -> pd.DataFrame:
         merged_df: build_merged_dataframe()으로 생성한 통합 DataFrame
 
     Returns:
-        template_id, template, log_count를 컬럼으로 하는 요약 DataFrame
+        template_id, template, log_count, levels, level_counts를 컬럼으로 하는 요약 DataFrame
+        - levels      : 해당 템플릿에 속한 원본 로그의 고유 레벨 목록 (쉼표 구분, 알파벳 정렬)
+        - level_counts: 레벨별 로그 건수 딕셔너리 문자열 (예: "ERROR:5, WARN:3")
     """
-    summary = (
+    base = (
         merged_df.groupby(["template_id", "template"], as_index=False)
         .agg(log_count=("line_number", "count"))
-        .sort_values("log_count", ascending=False)
+    )
+
+    # 템플릿별 레벨 집계
+    level_info = (
+        merged_df.groupby(["template_id", "level"])
+        .size()
+        .reset_index(name="cnt")
+    )
+
+    def _levels(tid: int) -> str:
+        lvls = level_info.loc[level_info["template_id"] == tid, "level"].tolist()
+        return ", ".join(sorted(set(lvls)))
+
+    def _level_counts(tid: int) -> str:
+        rows = level_info[level_info["template_id"] == tid].sort_values("level")
+        return ", ".join(f"{row.level}:{row.cnt}" for row in rows.itertuples())
+
+    base["levels"] = base["template_id"].apply(_levels)
+    base["level_counts"] = base["template_id"].apply(_level_counts)
+
+    return (
+        base.sort_values("log_count", ascending=False)
         .reset_index(drop=True)
     )
-    return summary
 
 
 # ---------------------------------------------------------------------------
