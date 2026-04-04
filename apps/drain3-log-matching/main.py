@@ -87,7 +87,7 @@ def build_pipeline(log_text: str, **miner_kwargs) -> tuple:
 
     # 3단계: DataFrame 구성
     log_df = build_log_dataframe(entries)
-    template_df = build_template_dataframe(results)
+    template_df = build_template_dataframe(results, entries)
     merged_df = build_merged_dataframe(log_df, template_df)
     print(f"[3] DataFrame 구성 완료: {len(merged_df)}행 x {len(merged_df.columns)}열\n")
 

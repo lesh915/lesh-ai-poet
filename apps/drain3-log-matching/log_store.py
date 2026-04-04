@@ -32,9 +32,11 @@ TEMPLATE_COLUMNS = [
     "template_id",
     "template",
     "cluster_size",
+    "level",
 ]
 
-MERGED_COLUMNS = LOG_COLUMNS + TEMPLATE_COLUMNS
+# MERGED_COLUMNS: level은 LOG_COLUMNS에서 가져오므로 TEMPLATE_COLUMNS의 level은 제외
+MERGED_COLUMNS = LOG_COLUMNS + ["template_id", "template", "cluster_size"]
 
 
 # ---------------------------------------------------------------------------
@@ -68,23 +70,31 @@ def build_log_dataframe(entries: list[LogEntry]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=LOG_COLUMNS)
 
 
-def build_template_dataframe(results: list[TemplateResult]) -> pd.DataFrame:
+def build_template_dataframe(
+    results: list[TemplateResult],
+    entries: Optional[list[LogEntry]] = None,
+) -> pd.DataFrame:
     """
     TemplateResult 리스트를 pandas DataFrame으로 변환합니다.
 
     Args:
         results: TemplateResult 객체 리스트 (로그와 순서 동일)
+        entries: LogEntry 객체 리스트 (results와 순서 동일).
+                 전달하면 각 행에 원본 로그의 level 값이 추가됩니다.
 
     Returns:
         템플릿 데이터가 담긴 DataFrame
+        컬럼: template_id, template, cluster_size, level(entries 전달 시)
     """
+    levels = [e.level for e in entries] if entries is not None else [None] * len(results)
     rows = [
         {
             "template_id": r.template_id,
             "template": r.template,
             "cluster_size": r.cluster_size,
+            "level": lvl,
         }
-        for r in results
+        for r, lvl in zip(results, levels)
     ]
     return pd.DataFrame(rows, columns=TEMPLATE_COLUMNS)
 
@@ -103,8 +113,10 @@ def build_merged_dataframe(
     Returns:
         원본 로그 + 템플릿 정보가 합쳐진 통합 DataFrame
     """
+    # template_df의 level 컬럼은 log_df에 이미 존재하므로 중복 제거 후 병합
+    tmpl = template_df.drop(columns=["level"], errors="ignore")
     merged = pd.concat(
-        [log_df.reset_index(drop=True), template_df.reset_index(drop=True)],
+        [log_df.reset_index(drop=True), tmpl.reset_index(drop=True)],
         axis=1,
     )
     return merged[MERGED_COLUMNS]
